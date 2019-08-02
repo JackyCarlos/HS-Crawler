@@ -52,7 +52,6 @@ def createDirectory(saveLocation):
     print(os.getcwd())
 
 
-
 def removeDuplicates(courses):
     courseList = []
 
