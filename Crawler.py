@@ -9,7 +9,7 @@ def login():
 
     username = input('please provide username for your moodle-account: ')
     password = input('please provide password for your moodle-account: ')
-    saveLocation = input('please specify a location in your home directory starting with \'~\': ')
+    saveLocation = input('please specify a location in your home directory starting with \'~\'h: ')
 
     # create a directory to safe the data to.
     createDirectory(saveLocation)
@@ -50,7 +50,6 @@ def createDirectory(saveLocation):
     homeDirectory = os.path.expanduser('~')
     print(homeDirectory)
     print(os.getcwd())
-
 
 
 def removeDuplicates(courses):
