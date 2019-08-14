@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
 import requests
-import getpass
 import re
 import os
 import Tools
@@ -10,16 +9,6 @@ fileExtensions = ('.pdf', '.docx', '.txt')
 loginPage = 'https://elearning.hs-offenburg.de/moodle/login/index.php'
 ignoredCourses = []
 tastyCookie = {}
-
-
-def setupLogin():
-    print('This tool logs into the moodle account you specify and downloads all the files within the courses and saves'
-          ' them to a folder of your choice.')
-
-    username = input('please provide username for your moodle-account: ')
-    password = getpass.getpass('please provide password for your moodle-account: ')
-
-    return username, password
 
 
 def moodleLogin(username, password):
@@ -77,6 +66,9 @@ def downloadCourseFiles(url, savePath):
 
     documentsID = re.findall(r'/mod/resource/view\.php\?id=([0-9]*)', coursePage)
 
+    print('Downloading files from ' + courseName)
+    print((len(courseName) + 23) * '-')
+
     for fileID in documentsID:
         fileResponse = session.get('https://elearning.hs-offenburg.de/moodle/mod/resource/view.php?id=' + str(fileID),
                                    cookies=tastyCookie, stream=True)
@@ -97,13 +89,15 @@ def downloadCourseFiles(url, savePath):
 
     session.close()
 
+    print('\n\n')
+
 
 def failedLogin(site):
     return re.findall(r'class="loginform"', site)
 
 
 if __name__ == '__main__':
-    (username, password) = setupLogin()
+    (username, password) = Tools.setupLogin()
 
     moodleStartpage = moodleLogin(username, password)
     crawlCourses(moodleStartpage)

@@ -2,13 +2,20 @@
 
 import os
 import datetime
-import re
-import requests
+import getpass
+
+
+def setupLogin():
+    print('\nThis tool logs into the moodle account you specify and downloads all the files within the courses and saves'
+          ' them to a folder located at ~/Documents \n')
+
+    username = input('please provide username for your moodle-account: ')
+    password = getpass.getpass('please provide password for your moodle-account: ')
+
+    return username, password
 
 
 def createDirectory():
-    print('files are downloaded to ~/Documents/<Moodle Download date:time>')
-
     workingDirectory = os.path.join(os.path.expanduser('~'), 'Documents')
 
     if not os.path.isdir(workingDirectory):
@@ -30,6 +37,8 @@ def createDirectory():
         print('Error - leaving')
         exit(0)
 
+    print('files are downloaded to ' + path)
+
     return path
 
 
@@ -41,8 +50,3 @@ def removeDuplicates(courses):
             courseList.append(course)
 
     return courseList
-
-
-if __name__ == '__main__':
-    print(r'\n')
-
