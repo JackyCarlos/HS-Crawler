@@ -18,9 +18,8 @@ def setupLogin():
 
     username = input('please provide username for your moodle-account: ')
     password = getpass.getpass('please provide password for your moodle-account: ')
-    saveLocation = input('please specify a location in your home directory starting with \'~/\': ')
 
-    return username, password, saveLocation
+    return username, password
 
 
 def moodleLogin(username, password):
@@ -53,17 +52,28 @@ def moodleLogin(username, password):
 
 
 def crawlCourses(moodleStartPage):
+    savePath = Tools.createDirectory()
     courses = Tools.removeDuplicates(re.findall(r'course/view\.php\?id=([0-9]{4,})"', moodleStartPage))
 
     for course in courses:
         if course not in ignoredCourses:
-            downloadCourseFiles('https://elearning.hs-offenburg.de/moodle/course/view.php?id=' + str(course))
+            downloadCourseFiles('https://elearning.hs-offenburg.de/moodle/course/view.php?id=' + str(course), savePath)
 
 
-def downloadCourseFiles(url):
+def downloadCourseFiles(url, savePath):
     session = requests.session()
-
     coursePage = session.get(url, cookies=tastyCookie).text
+    #print(coursePage)
+
+    courseName = re.findall(r'Kurs: (.+)<', coursePage)
+    i = 1
+
+    if not courseName:
+        return
+
+    courseName = courseName[0].replace('/', '-').replace('\\', '-')
+    courseFolder = os.path.join(savePath, courseName)
+    os.mkdir(courseFolder)
 
     documentsID = re.findall(r'/mod/resource/view\.php\?id=([0-9]*)', coursePage)
 
@@ -72,10 +82,15 @@ def downloadCourseFiles(url):
                                    cookies=tastyCookie, stream=True)
 
         if fileResponse.status_code == 200:
-            fileName = re.findall(r'"(.+)"', fileResponse.headers['Content-Disposition'].encode("iso-8859-1").decode('utf-8'))[0]
+            if 'Content-Disposition' in fileResponse.headers:
+                fileName = re.findall(r'"(.+)"', fileResponse.headers['Content-Disposition'].encode('iso-8859-1').decode('utf-8'))[0]
+            else:
+                fileName = 'Document-' + str(i)
+                i += 1
+
             print('Downloading: ' + fileName + ' ...')
 
-            with open('/home/was_4/Documents/' + fileName, 'wb', os.O_CREAT) as f:
+            with open(os.path.join(courseFolder, fileName), 'wb', os.O_CREAT) as f:
                 f.write(fileResponse.content)
         else:
             print('Donwload failed!')
@@ -88,15 +103,10 @@ def failedLogin(site):
 
 
 if __name__ == '__main__':
-    (username, password, saveLocation) = setupLogin()
+    (username, password) = setupLogin()
 
     moodleStartpage = moodleLogin(username, password)
-    downloadCourseFiles('https://elearning.hs-offenburg.de/moodle/course/view.php?id=2625')
-    exit(0)
-
-    Tools.createDirectory(saveLocation)
-
     crawlCourses(moodleStartpage)
 
-
-#'please provide password for your moodle-account: '
+    # downloadCourseFiles('https://elearning.hs-offenburg.de/moodle/course/view.php?id=2625')
+    # exit(0)
