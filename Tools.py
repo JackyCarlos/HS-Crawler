@@ -3,6 +3,7 @@
 import os
 import datetime
 import re
+import requests
 
 
 def createDirectory(saveLocation):
@@ -32,3 +33,17 @@ def removeDuplicates(courses):
             courseList.append(course)
 
     return courseList
+
+
+if __name__ == '__main__':
+    session = requests.session()
+
+    fileResponse = session.get('http://www.pdf995.com/samples/pdf.pdf')
+
+    print(fileResponse.headers)
+    '''
+    if fileResponse.status_code == 200:
+        with open('/home/was_4/Documents/try.pdf', 'wb', os.O_CREAT) as f:
+            f.write(fileResponse.content)
+    '''
+
