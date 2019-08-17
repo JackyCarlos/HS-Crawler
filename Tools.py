@@ -3,6 +3,7 @@
 import os
 import datetime
 import getpass
+import re
 
 
 def setupLogin():
@@ -16,7 +17,7 @@ def setupLogin():
 
 
 def createDirectory():
-    workingDirectory = os.path.join(os.path.expanduser('~'), 'Documents')
+    workingDirectory = os.path.join(os.path.expanduser('~'), 'Dokumente')
 
     if not os.path.isdir(workingDirectory):
         print('invalid saving location!')

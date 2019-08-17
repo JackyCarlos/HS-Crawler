@@ -5,7 +5,6 @@ import re
 import os
 import Tools
 
-fileExtensions = ('.pdf', '.docx', '.txt')
 loginPage = 'https://elearning.hs-offenburg.de/moodle/login/index.php'
 ignoredCourses = []
 tastyCookie = {}
@@ -65,13 +64,27 @@ def downloadCourseFiles(url, savePath):
     os.mkdir(courseFolder)
 
     documentsID = re.findall(r'/mod/resource/view\.php\?id=([0-9]*)', coursePage)
+    #number = re.findall(r'\.php/([0-9]+)/mod_folder/content/0/', coursePage)
+
+    if 'forcedownload' in coursePage:
+        additionalDocuments = re.findall(r'pluginfile.php/([0-9]+)/mod_folder/content/0/(.{1,100})\?forcedownload=', coursePage)
+        documentsID.extend(additionalDocuments)
+
+    print(documentsID)
 
     print('Downloading files from ' + courseName)
     print((len(courseName) + 23) * '-')
 
+    # https://elearning.hs-offenburg.de/moodle/pluginfile.php/404801/mod_folder/content/0/Vorlesungsunterlagen_Prozessmanagement_SS2019.pdf?forcedownload=1
+
     for fileID in documentsID:
-        fileResponse = session.get('https://elearning.hs-offenburg.de/moodle/mod/resource/view.php?id=' + str(fileID),
-                                   cookies=tastyCookie, stream=True)
+        if type(fileID) is tuple:
+            fileResponse = session.get('https://elearning.hs-offenburg.de/moodle/pluginfile.php/'
+                                       + fileID[0] + '/mod_folder/content/0/' + fileID[1] + '?forcedownload=1',
+                                       cookies=tastyCookie, stream=True)
+        else:
+            fileResponse = session.get('https://elearning.hs-offenburg.de/moodle/mod/resource/view.php?id=' + str(fileID),
+                                       cookies=tastyCookie, stream=True)
 
         if fileResponse.status_code == 200:
             if 'Content-Disposition' in fileResponse.headers:
@@ -101,6 +114,3 @@ if __name__ == '__main__':
 
     moodleStartpage = moodleLogin(username, password)
     crawlCourses(moodleStartpage)
-
-    # downloadCourseFiles('https://elearning.hs-offenburg.de/moodle/course/view.php?id=2625')
-    # exit(0)
