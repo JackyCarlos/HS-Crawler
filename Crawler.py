@@ -6,7 +6,7 @@ import os
 import Tools
 
 loginPage = 'https://elearning.hs-offenburg.de/moodle/login/index.php'
-ignoredCourses = []
+ignoredCourses = [1643] # Brückenkurs
 tastyCookie = {}
 
 
@@ -39,22 +39,26 @@ def moodleLogin(username, password):
     return siteLogin
 
 
-def crawlCourses(moodleStartPage):
-    savePath = Tools.createDirectory()
-    courses = Tools.removeDuplicates(re.findall(r'course/view\.php\?id=([0-9]{4,})"', moodleStartPage))
+def failedLogin(site):
+    return re.findall(r'class="loginform"', site)
 
-    for course in courses:
-        if course not in ignoredCourses:
-            downloadCourseFiles('https://elearning.hs-offenburg.de/moodle/course/view.php?id=' + str(course), savePath)
+
+def extractDocuments(coursePage):
+    documentsID = re.findall(r'/mod/resource/view\.php\?id=([0-9]*)', coursePage)
+
+    if 'forcedownload' in coursePage:
+        additionalDocuments = re.findall(r'pluginfile\.php/([0-9]+)/mod_folder/content/0/(.{1,100})\?forcedownload=', coursePage)
+        documentsID.extend(additionalDocuments)
+
+    return documentsID
 
 
 def downloadCourseFiles(url, savePath):
     session = requests.session()
     coursePage = session.get(url, cookies=tastyCookie).text
-    #print(coursePage)
-
-    courseName = re.findall(r'Kurs: (.+)<', coursePage)
     i = 1
+
+    courseName = re.findall(r'<title>.+: (.+)</title>', coursePage)
 
     if not courseName:
         return
@@ -63,27 +67,29 @@ def downloadCourseFiles(url, savePath):
     courseFolder = os.path.join(savePath, courseName)
     os.mkdir(courseFolder)
 
-    documentsID = re.findall(r'/mod/resource/view\.php\?id=([0-9]*)', coursePage)
-    #number = re.findall(r'\.php/([0-9]+)/mod_folder/content/0/', coursePage)
+    subFolders = re.findall(r'/mod/folder/view\.php\?id=([0-9]+)">', coursePage)
 
-    if 'forcedownload' in coursePage:
-        additionalDocuments = re.findall(r'pluginfile.php/([0-9]+)/mod_folder/content/0/(.{1,100})\?forcedownload=', coursePage)
-        documentsID.extend(additionalDocuments)
+    if 'mod/folder/view.php' not in url:
+        for folderID in subFolders:
+            downloadCourseFiles('https://elearning.hs-offenburg.de/moodle/mod/folder/view.php?id=' + str(folderID), courseFolder)
 
-    print(documentsID)
+
+    documentsIDs = extractDocuments(coursePage)
+
+    #print(documentsIDs)
 
     print('Downloading files from ' + courseName)
     print((len(courseName) + 23) * '-')
 
     # https://elearning.hs-offenburg.de/moodle/pluginfile.php/404801/mod_folder/content/0/Vorlesungsunterlagen_Prozessmanagement_SS2019.pdf?forcedownload=1
 
-    for fileID in documentsID:
+    for fileID in documentsIDs:
         if type(fileID) is tuple:
             fileResponse = session.get('https://elearning.hs-offenburg.de/moodle/pluginfile.php/'
                                        + fileID[0] + '/mod_folder/content/0/' + fileID[1] + '?forcedownload=1',
                                        cookies=tastyCookie, stream=True)
         else:
-            fileResponse = session.get('https://elearning.hs-offenburg.de/moodle/mod/resource/view.php?id=' + str(fileID),
+            fileResponse = session.get('https://elearning.hs-offenburg.de/moodle/mod/resource/view.php', params={'id': fileID},
                                        cookies=tastyCookie, stream=True)
 
         if fileResponse.status_code == 200:
@@ -105,12 +111,18 @@ def downloadCourseFiles(url, savePath):
     print('\n\n')
 
 
-def failedLogin(site):
-    return re.findall(r'class="loginform"', site)
+def crawlCourses(moodleStartPage):
+    savePath = Tools.createDirectory()
+    courses = Tools.removeDuplicates(re.findall(r'course/view\.php\?id=([0-9]{4,})"', moodleStartPage))
+
+    for course in courses:
+        if course not in ignoredCourses:
+            downloadCourseFiles('https://elearning.hs-offenburg.de/moodle/course/view.php?id=' + str(course), savePath)
 
 
 if __name__ == '__main__':
     (username, password) = Tools.setupLogin()
 
     moodleStartpage = moodleLogin(username, password)
+
     crawlCourses(moodleStartpage)
