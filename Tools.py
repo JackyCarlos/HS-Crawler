@@ -3,7 +3,6 @@
 import os
 import datetime
 import getpass
-import re
 
 
 def setupLogin():

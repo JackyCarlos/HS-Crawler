@@ -6,8 +6,9 @@ import os
 import Tools
 
 loginPage = 'https://elearning.hs-offenburg.de/moodle/login/index.php'
-ignoredCourses = [1643] # Brückenkurs
+moodleHost = 'https://elearning.hs-offenburg.de/'
 tastyCookie = {}
+ignoredCourses = [1643] # Brückenkurs
 
 
 def moodleLogin(username, password):
@@ -17,9 +18,9 @@ def moodleLogin(username, password):
         hsPage = session.get(loginPage).text
 
         # in order to login we have to submit a token. Every time we enter the page to login a new one gets generated.
-        loginToken = re.findall(r'name="logintoken" value="([a-zA-Z0-9]*)"', hsPage)
+        loginToken = re.findall(r'name="logintoken" value="([a-zA-Z0-9]*)"', hsPage)[0]
 
-        loginCredentials = {'username': username, 'password': password, 'logintoken': loginToken[0]}
+        loginCredentials = {'username': username, 'password': password, 'logintoken': loginToken}
 
         siteLogin = session.post(loginPage, data=loginCredentials).text
         tastyCookie.update(session.cookies.get_dict())
@@ -28,7 +29,6 @@ def moodleLogin(username, password):
         print('The moodle site appears to be down. Check your internet connection. ')
         exit(0)
 
-    # check for a failed login atempt
     if failedLogin(siteLogin):
         print('invalid login credentials')
 
@@ -71,8 +71,7 @@ def downloadCourseFiles(url, savePath):
 
     if 'mod/folder/view.php' not in url:
         for folderID in subFolders:
-            downloadCourseFiles('https://elearning.hs-offenburg.de/moodle/mod/folder/view.php?id=' + str(folderID), courseFolder)
-
+            downloadCourseFiles(moodleHost + 'moodle/mod/folder/view.php?id=' + str(folderID), courseFolder)
 
     documentsIDs = extractDocuments(coursePage)
 
@@ -85,11 +84,11 @@ def downloadCourseFiles(url, savePath):
 
     for fileID in documentsIDs:
         if type(fileID) is tuple:
-            fileResponse = session.get('https://elearning.hs-offenburg.de/moodle/pluginfile.php/'
+            fileResponse = session.get(moodleHost + 'moodle/pluginfile.php/'
                                        + fileID[0] + '/mod_folder/content/0/' + fileID[1] + '?forcedownload=1',
                                        cookies=tastyCookie, stream=True)
         else:
-            fileResponse = session.get('https://elearning.hs-offenburg.de/moodle/mod/resource/view.php', params={'id': fileID},
+            fileResponse = session.get(moodleHost + '/moodle/mod/resource/view.php', params={'id': fileID},
                                        cookies=tastyCookie, stream=True)
 
         if fileResponse.status_code == 200:
@@ -117,7 +116,7 @@ def crawlCourses(moodleStartPage):
 
     for course in courses:
         if course not in ignoredCourses:
-            downloadCourseFiles('https://elearning.hs-offenburg.de/moodle/course/view.php?id=' + str(course), savePath)
+            downloadCourseFiles(moodleHost + 'moodle/course/view.php?id=' + str(course), savePath)
 
 
 if __name__ == '__main__':
